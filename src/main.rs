@@ -6,7 +6,17 @@ use axum::{
     Json,
     Router, http::{response, request},
 };
-use serde_json::Value;
+
+#[derive(Deserialize, Debug)]
+struct RequestJenkinsBuild {
+    job_name: String,
+    git_branch: String
+}
+
+#[derive(Deserialize,Debug)]
+struct RequestDingTalk {
+    text: String,
+}
 
 #[derive(Debug)]
 enum ResponseCode {
@@ -19,7 +29,7 @@ enum ResponseCode {
 struct CustomResult {
     code: u16,
     message: String,
-    data: Option<Value>,
+    data: Option<serde_json::Value>,
 }
 
 #[derive(Serialize, Debug)]
@@ -33,11 +43,6 @@ struct ActionCard {
 struct DingTalkRequest {
     msgtype: String,
     actionCard: ActionCard,
-}
-
-#[derive(Deserialize,Debug)]
-struct RequestDingTalk {
-    text: String,
 }
 
 // 钉钉机器人URL
@@ -59,6 +64,7 @@ async fn main() {
     let app = Router::new()
        .route("/", get(hello))
        .route("/jenkins/info", get(get_jenkins_info))
+       .route("/jenkins/lanunchBuild", post(launch_jenkins_build))
        .route("/dingtalk/send", post(send_dingtalk_message));
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3005").await;
@@ -77,9 +83,50 @@ async fn hello() -> &'static str {
     "Hello, world!"
 }
 
+async fn send_request(method: reqwest::Method, url: String, auth: Option<(String, Option<String>)>, body: Option<String>) -> Json<CustomResult> {
+    println!("request: {}", url);
+    let client = reqwest::Client::new();
+    let mut request = client.request(method, &url);
+    
+    if let Some((username, password)) = auth {
+        request = request.basic_auth(username, password);
+    }
+
+    if let Some(body_content) = body {
+        request = request.body(body_content);
+    }
+
+    
+    let resp = request.header("Content-Type", "application/json").send().await;
+
+    let result = match resp {
+        Ok(response) => {
+            let code = response.status().as_u16();
+            let message = if response.status().is_success() { "Success".to_string() } else { "Failed".to_string() };
+            let data = response.text().await.ok().and_then(|body| serde_json::from_str::<serde_json::Value>(&body).ok());
+            
+            CustomResult {
+                code,
+                message,
+                data,
+            }
+        }
+        Err(e) => {
+            CustomResult {
+                code: 500,
+                message: format!("Failed to fetch data: {:?}", e),
+                data: None,
+            }
+        }
+    };
+
+    println!("result: {:#?}", &result);
+    Json(result)
+}
+
 async fn send_dingtalk_message(body: Json<RequestDingTalk>) -> Json<CustomResult> {
     let request_body = body.0;
-    let client = reqwest::Client::new();
+    let url = DING_TALK_URL.to_string();
     let request = DingTalkRequest { 
         msgtype: "actionCard".to_string(),
         actionCard: ActionCard {
@@ -88,79 +135,22 @@ async fn send_dingtalk_message(body: Json<RequestDingTalk>) -> Json<CustomResult
             btnOrientation: "0".to_string(),
         },
     };
-    let resp = client
-       .post(DING_TALK_URL)
-       .body(serde_json::to_string(&request).unwrap_or_else(|_| "".to_string()))
-       .header("Content-Type", "application/json")
-       .send()
-       .await;
-    
-       let result = match resp {
-        Ok(response) => {
-            if response.status().is_success() {
-                // 当请求成功时，构建 CustomResult 结构体
-                let body = response.text().await.unwrap_or_else(|_| "".to_string());
-                let parsed_body = serde_json::from_str::<serde_json::Value>(&body).unwrap_or_else(|_| serde_json::Value::Null);
-                CustomResult {
-                    code: 200,
-                    message: "Success".to_string(),
-                    data: Some(parsed_body)
-                }
-            } else {
-                CustomResult {
-                    code: response.status().as_u16(),
-                    message: "Failed".to_string(),
-                    data: None
-                }
-            }
-        }
-        Err(_) => {
-            CustomResult {
-                code: 500, // Internal Server Error
-                message: "Failed to fetch data".to_string(),
-                data: None
-            }
-        }
-    };
-    Json(result)
+
+    let body_content = serde_json::to_string(&request).unwrap_or_else(|_| "".to_string());
+
+    send_request(reqwest::Method::POST, url, None, Some(body_content)).await
+}
+
+async fn launch_jenkins_build(body: Json<RequestJenkinsBuild>) -> Json<CustomResult> {
+    let url = format!("{url}/job/{job_name}/buildWithParameters?git_branch={git_branch}", url = JENKINS_URL, git_branch = body.0.git_branch, job_name = body.0.job_name);
+    let auth = (JENKIDS_USER_NAME.to_string(), Some(JENKIDS_PASSWORD.to_string()));
+
+    send_request(reqwest::Method::POST, url, Some(auth), None).await
 }
 
 async fn get_jenkins_info() -> Json<CustomResult> {
-    let client = reqwest::Client::new();
-    let resp = client
-        .get(format!("{url}/api/json", url = JENKINS_URL))
-        .basic_auth(JENKIDS_USER_NAME, Some(JENKIDS_PASSWORD))
-        .send()
-        .await;
-   
-    // 处理请求结果
-    let result = match resp {
-        Ok(response) => {
-            if response.status().is_success() {
-                // 当请求成功时，构建 CustomResult 结构体
-                let body = response.text().await.unwrap_or_else(|_| "".to_string());
-                let parsed_body = serde_json::from_str::<serde_json::Value>(&body).unwrap_or_else(|_| serde_json::Value::Null);
-                CustomResult {
-                    code: 200,
-                    message: "Success".to_string(),
-                    data: Some(parsed_body)
-                }
-            } else {
-                CustomResult {
-                    code: response.status().as_u16(),
-                    message: "Failed".to_string(),
-                    data: None
-                }
-            }
-        }
-        Err(_) => {
-            CustomResult {
-                code: 500, // Internal Server Error
-                message: "Failed to fetch data".to_string(),
-                data: None
-            }
-        }
-    };
-    println!("result: {:#?}", &result);
-    Json(result)
+    let url = format!("{url}/api/json", url = JENKINS_URL);
+    let auth = (JENKIDS_USER_NAME.to_string(), Some(JENKIDS_PASSWORD.to_string()));
+
+    send_request(reqwest::Method::GET, url, Some(auth), None).await
 }
