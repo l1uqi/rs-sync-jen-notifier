@@ -46,8 +46,8 @@ pub async fn get_jenkins_info(state: Extension<Arc<State>>) -> Json<Payload> {
 // 触发jenkins构建
 // 推送钉钉消息
 pub async fn reciver_git_change(state: Extension<Arc<State>>, body: Json<GitLabelChangeRequest>) {
-    let info = git_to_jenkins_project_info(body.0.project.name);
-    let git_content = git_change_content(body.0.commits);
+    let info = git_to_jenkins_project_info(&body.0.project.name, &state.config.clone());
+    let git_content = git_change_content(body.0.commits, state.config.clone());
     if info.is_some() {
         let project_info = info.unwrap();
         if project_info.ref_ == body.0.reference {

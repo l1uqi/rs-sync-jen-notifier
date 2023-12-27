@@ -6,13 +6,18 @@ Rust Web练手项目 基于[Axum](https://github.com/tokio-rs/axum)
 
 ![](1703585175799.jpg)
 
-### 功能
+### 展示
+![](b20eccb5795022d51d89557b0c675d90.png)
 
+### 功能
 
 ```
 /reciver // 配置gitlab webhook
+
 /jenkins/info // 获取jenkins 信息
+
 /jenkins/lanunchBuild // 开启jenkins构建
+
 /dingtalk/send // 发送钉钉消息
 
 ```
@@ -33,6 +38,38 @@ JENKINS.PASSWORD =你的Jenkins密码
 
 ```
 
+config
+
+accounts: git账号转换人员姓名
+
+projects: git项目名称获取jenkins信息
+```
+{
+  "accounts": {
+    "xiaoming": "小明",
+    "xiaozhou": "小周",
+    ...
+  },
+  "projects": {
+    "test-1": {
+      "ref_": "refs/heads/auto-test", // 指定的分支才会推送 如: refs/heads/auto-test
+      "branch_name": "auto-test",
+      "job_name": "jenkins名称",
+      "project_name": "项目名称"
+    },
+    "test-2": {
+      "ref_": "refs/heads/auto-test",
+      "branch_name": "auto-test",
+      "job_name": "jenkins名称",
+      "project_name": "项目名称"
+    },
+  }
+}
+
+```
+
 
 ### 后续
+
 适配微信群机器人等.
+

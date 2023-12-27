@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{sync::Arc, fs::File, io::Read, env};
 
 use axum::{routing::{get, post}, Router, Extension};
 use rs_sync_jen_notifier::dto::{Config, State};
@@ -12,9 +12,18 @@ async fn main() {
 
     let cfg = Config::from_env().expect("初始化项目配置失败");
 
+    let mut file = File::open("config.json").expect("Config file not found");
+
+    let mut contents = String::new();
+
+    file.read_to_string(&mut contents).expect("Failed to read config file");
+
+    let config: serde_json::Value = serde_json::from_str(&contents).expect("Failed to parse config file");
+
     let state = Arc::new(State {
         dingtalk: cfg.dingtalk,
-        jenkins: cfg.jenkins
+        jenkins: cfg.jenkins,
+        config: config
     });
 
     tracing_subscriber::fmt::init();

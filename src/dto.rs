@@ -3,7 +3,8 @@ use serde::{Serialize, Deserialize};
 #[derive(Debug)]
 pub struct State {
     pub dingtalk: DingTalkConfig,
-    pub jenkins: JenkinsConfig
+    pub jenkins: JenkinsConfig,
+    pub config: serde_json::Value
  }
 
 #[derive(Deserialize, Debug)]
