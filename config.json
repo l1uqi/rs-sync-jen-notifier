@@ -1,20 +1,12 @@
 {
   "accounts": {
-    "xiaoming": "小明",
-    "xiaozhou": "小周"
-  },
-  "projects": {
-    "test-1": {
-      "ref_": "refs/heads/auto-test",
-      "branch_name": "auto-test",
-      "job_name": "jenkins名称",
-      "project_name": "项目名称"
-    },
-    "test-2": {
-      "ref_": "refs/heads/auto-test",
-      "branch_name": "auto-test",
-      "job_name": "jenkins名称",
-      "project_name": "项目名称"
-    },
+    "fatTiger": "祝震",
+    "c37\\c37csq": "陈思琪",
+    "pgy": "彭国洋",
+    "xuxinsheng": "许新胜",
+    "liuqi": "刘琦",
+    "wucai": "吴偲",
+    "fz": "邓方正"
   }
+  
 }

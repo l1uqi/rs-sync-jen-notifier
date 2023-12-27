@@ -22,9 +22,14 @@ Rust Web练手项目 基于[Axum](https://github.com/tokio-rs/axum)
 
 ```
 
+### 运行
+```
+Cargo run
+```
+
 
 ### 配置
-.env 目录
+**.env**
 ```
 DINGTALK.URL = 你的钉钉消息URL(url + token完整路径)
 
@@ -38,11 +43,12 @@ JENKINS.PASSWORD =你的Jenkins密码
 
 ```
 
-config
+**config.json**
 
-accounts: git账号转换人员姓名
+accounts: git name to 姓名
 
-projects: git项目名称获取jenkins信息
+projects: git项目名称获取对应Jenkins信息
+
 ```
 {
   "accounts": {
